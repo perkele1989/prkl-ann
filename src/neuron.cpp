@@ -15,7 +15,7 @@ prkl::real prkl::ann_neuron::activate(prkl::ann_layer const &input_layer)
 {
     if(input_layer.neurons.size() != input_weights.size())
     {
-        throw std::exception("incompatible input layer");
+        throw std::runtime_error("incompatible input layer");
     }
 
     if(input_weights.empty())

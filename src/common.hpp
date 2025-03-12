@@ -7,7 +7,9 @@
 #include <cassert>
 #include <numbers>
 #include <limits>
-
+#include <algorithm>
+#include <cmath>
+#include <cstring>
 
 #include <fstream>
 
@@ -16,15 +18,13 @@
 #define NOMINMAX
     #include <winsock2.h>
     #include <ws2tcpip.h>
-    #pragma comment(lib, "Ws2_32.lib") // Required for linking
+    #pragma comment(lib, "Ws2_32.lib")
 #else
     #include <arpa/inet.h>
 #endif
 
-#ifdef _WIN32
-    #define ntohll(x) ((uint64_t(ntohl(x & 0xFFFFFFFF)) << 32) | ntohl(x >> 32))
-    #define htonll(x) ((uint64_t(htonl(x & 0xFFFFFFFF)) << 32) | htonl(x >> 32))
-#endif
+#define ntohll(x) ((uint64_t(ntohl(x & 0xFFFFFFFF)) << 32) | ntohl(x >> 32))
+#define htonll(x) ((uint64_t(htonl(x & 0xFFFFFFFF)) << 32) | htonl(x >> 32))
 
 namespace prkl 
 {

@@ -1,6 +1,8 @@
 # PRKL-ANN  
 **An educational C++ framework for Artificial Neural Networks**  
 
+![build status](https://github.com/perkele1989/prkl-ann/actions/workflows/cmake-multi-platform.yml/badge.svg)
+
 ## What it is  
 ✔ **An educational framework** with an intuitive C++ API designed for learning and experimentation.  
 ✔ **Supports Multi-Layer Perceptrons (MLPs)** with dense, fully connected layers.  

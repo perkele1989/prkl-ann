@@ -20,14 +20,15 @@ int32_t main(int32_t argc, char **argv)
     
     std::cout << " --- Loading model ---" << std::endl;
     prkl::ann_model model(model_path.c_str());
-
-    if(model.input().neurons.size() != 784)
+    prkl::ann_layer_base *input_layer = model.input();
+    prkl::ann_layer_base *output_layer = model.output();
+    if(input_layer->num_activations() != 784)
     {
         std::cerr << "Model input size is not 784, incompatible with MNIST digits set" << std::endl;
         return 1;
     }
 
-    if(model.output().neurons.size() != 10)
+    if(output_layer->num_activations() != 10)
     {
         std::cerr << "Model output size is not 10, incompatible with MNIST digits set" << std::endl;
         return 1;
@@ -52,7 +53,7 @@ int32_t main(int32_t argc, char **argv)
 
     for(prkl::integer i = 0; i < 784; i++)
     {
-        model.input().neurons[i].activation = scaled_data[i];
+        input_layer->set_activation(i, scaled_data[i]);
     }
 
     free(scaled_data);
@@ -65,10 +66,9 @@ int32_t main(int32_t argc, char **argv)
         return 1;
     }
 
-    prkl::ann_layer &output = model.output();
-    prkl::integer max_index = output.max_activation_index();
+    prkl::integer max_index = output_layer->max_activation_index();
 
-    prkl::real certainty = std::clamp(output.neurons[max_index].activation * 100.0f, 0.0f, 100.0f);
+    prkl::real certainty = std::clamp(output_layer->get_activation(max_index) * 100.0f, 0.0f, 100.0f);
     std::cout << "The image is identified as the digit " << max_index << " with a certainty of " << certainty << "%" << std::endl; 
 
 

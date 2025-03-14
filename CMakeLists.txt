@@ -1,7 +1,12 @@
-cmake_minimum_required(VERSION 3.2)
+cmake_minimum_required(VERSION 3.2...4.0)
 project(prkl-ann)
 
-add_library(prkl-ann STATIC "src/common.hpp" "src/common.cpp" "src/neuron.hpp" "src/neuron.cpp" "src/layer.hpp" "src/layer.cpp" "src/model.hpp" "src/model.cpp" "src/set.cpp" "src/set.hpp")
+add_library(prkl-ann STATIC "src/common.hpp" "src/common.cpp" "src/layer.hpp" "src/layer.cpp" "src/model.hpp" "src/model.cpp" "src/set.cpp" "src/set.hpp")
+
+find_package(OpenMP REQUIRED)
+if(OpenMP_CXX_FOUND)
+    target_link_libraries(prkl-ann PRIVATE OpenMP::OpenMP_CXX)
+endif()
 target_include_directories(prkl-ann PUBLIC "src")
 set_property(TARGET prkl-ann PROPERTY CXX_STANDARD 20)
 

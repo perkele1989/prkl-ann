@@ -143,4 +143,21 @@ namespace prkl
         int_val = htonl(int_val);
         file.write(reinterpret_cast<const char*>(&int_val), sizeof(int_val));
     }
+
+    
+    enum class ann_model_version : integer 
+    {
+        initial = 0,
+        count,
+        latest = count - 1 
+    };
+
+    enum class ann_layer_type : integer
+    {
+        undefined = 0,
+        dense = 1,
+        convolutional = 2,
+        pooling = 3,
+    };
+
 }

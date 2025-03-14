@@ -19,6 +19,15 @@
 ❌ A framework for Convolutional Neural Networks (CNNs).  
 ❌ A framework for Large Language Models (LLMs) or Transformers.  
 
+## Pretrained models
+The repository contains 3 models of different sizes, that are pretrained on the MNIST digits dataset. These models are simple MLP's with dense layers, and do not use convolution layers and such.
+
+| Model | Size | Layers | Accuracy | Loss |
+| ---| --- | --- | --- | --- |
+|`prkl-mnist-digits-small`|210 KB|784, 64, 32, 10|96.24%|  0.0850094 |
+|`prkl-mnist-digits-medium`|448 KB|784, 128, 64, 64, 10|97.36%|  0.0471145 |
+|`prkl-mnist-digits-big`|1362 KB|784, 392, 98, 10|98.11%| 0.0432963 |
+
 ## Installation  
 
 Build via CMake, or simply open the folder in VSCode and hit build.

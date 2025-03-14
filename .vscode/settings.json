@@ -73,6 +73,19 @@
         "xlocmon": "cpp",
         "xloctime": "cpp",
         "xtree": "cpp",
-        "numbers": "cpp"
+        "numbers": "cpp",
+        "xstddef": "cpp"
+    },
+    "cmake.debugConfig": {
+        "args": [
+            "-t",
+            "C:/dev/prkl-ann/data/mnnist-digits-training.prklset",
+            "-e",
+            "C:/dev/prkl-ann/data/mnnist-digits-evaluation.prklset",
+            "-p",
+            "1",
+            "-c",
+            "784,64,32,10"
+        ]
     }
 }

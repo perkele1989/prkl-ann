@@ -73,7 +73,8 @@
         "xlocmon": "cpp",
         "xloctime": "cpp",
         "xtree": "cpp",
-        "numbers": "cpp"
+        "numbers": "cpp",
+        "xstddef": "cpp"
     },
     "cmake.debugConfig": {
         "args": [

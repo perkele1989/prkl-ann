@@ -142,36 +142,7 @@ int32_t main(int32_t argc, char **argv)
     if(do_evaluation)
     {
         std::cout << " --- Evaluating model --- " << std::endl;
-        prkl::ann_layer_base *input_layer = model.input();
-        prkl::ann_layer_base *output_layer = model.output();
-        prkl::integer num_miss = 0;
-        prkl::integer num_pairs = evaluation_set.pairs.size();
-
-        for(prkl::integer e = 0; e <  num_pairs; e++)
-        {
-            prkl::ann_setpair &eval_pair = evaluation_set.pairs[e];
-
-            for(prkl::integer i = 0; i < input_layer->num_activations(); i++)
-            {
-                input_layer->set_activation(i, eval_pair.input[i]);
-            }
-
-            if(!model.forward_propagate())
-            {
-                std::cerr << "forward propagation failed: evaluation failed!" << std::endl;
-                return 1;
-            }
-
-            prkl::integer max_index_output = output_layer->max_activation_index();
-            prkl::integer max_index_expected = eval_pair.max_output_index();
-
-            if(max_index_output != max_index_expected)
-            {
-                num_miss++;
-            }
-        }
-
-        std::cout << "Evaluated " << num_pairs << " pairs, with " << num_miss << " misses. Success rate: " << (100.0 * (1.0 - (prkl::real(num_miss) / prkl::real(num_pairs)))) << "%" << std::endl;
+        model.evaluate(evaluation_set);
     }
 
     if(do_output)

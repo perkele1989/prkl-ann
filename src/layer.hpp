@@ -15,6 +15,9 @@ namespace prkl
     struct ann_layer_base 
     {
         virtual ~ann_layer_base()=default;
+
+        virtual void write(std::ofstream &file)=0;
+
         virtual ann_layer_base *clone() const = 0;
         virtual integer num_activations() const = 0;
         
@@ -34,8 +37,9 @@ namespace prkl
     struct ann_dense_layer : public ann_layer_base
     {
         ann_dense_layer(integer num_neurons, integer num_inputs);
+        ann_dense_layer(std::ifstream &file);
         virtual ~ann_dense_layer();
-
+        virtual void write(std::ofstream &file) override;
         void randomize_weights();
         
         virtual integer min_activation_index() const override;

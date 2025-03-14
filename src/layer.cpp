@@ -1,6 +1,7 @@
 
 #include "layer.hpp"
-#include "neuron.hpp"
+
+#include <omp.h>
 
 prkl::ann_dense_layer::ann_dense_layer(integer in_neurons, integer in_inputs)
 {
@@ -18,6 +19,64 @@ prkl::ann_dense_layer::ann_dense_layer(integer in_neurons, integer in_inputs)
     { 
         weights = nullptr;
         biases = nullptr;
+    }
+}
+
+prkl::ann_dense_layer::ann_dense_layer(std::ifstream &file)
+{
+    num_neurons = read_uint64_be(file);
+    num_inputs = read_uint64_be(file);
+
+    activations = new real[num_neurons]();
+    for(integer n = 0; n < num_neurons; n++)
+    {
+        activations[n] = read_float_be(file);
+    }
+
+    if(num_inputs > 0)
+    {
+        weights = new real[num_inputs * num_neurons]();
+        biases = new real[num_neurons]();
+
+        for(integer w = 0; w < num_neurons * num_inputs; w++)
+        {
+            weights[w] = read_float_be(file);
+        }
+
+        for(integer n = 0; n < num_neurons; n++)
+        {
+            biases[n] = read_float_be(file);
+        }
+    }
+    else
+    { 
+        weights = nullptr;
+        biases = nullptr;
+    }
+}
+
+void prkl::ann_dense_layer::write(std::ofstream &file)
+{
+    write_uint64_be(file, (uint64_t)ann_layer_type::dense);
+    write_uint64_be(file, num_neurons);
+    write_uint64_be(file, num_inputs);
+
+    for(integer n = 0; n < num_neurons; n++)
+    {
+        write_float_be(file, activations[n]);
+    }
+
+    if(num_inputs > 0)
+    {
+        for(integer w = 0; w < num_neurons * num_inputs; w++)
+        {
+            write_float_be(file, weights[w]);
+        }
+
+        for(integer n = 0; n < num_neurons; n++)
+        {
+            write_float_be(file, biases[n]);
+        }
     }
 }
 
@@ -130,7 +189,8 @@ void prkl::ann_dense_layer::forward(prkl::ann_layer_base const*prev_layer)
     if(num_inputs == 0)
         return;
 
-    for(integer n = 0; n < num_neurons; n++)
+    #pragma omp parallel for if(num_neurons >= 128)
+    for(natural n = 0; n < num_neurons; n++)
     {
         activations[n] = biases[n];
 
@@ -149,13 +209,19 @@ void prkl::ann_dense_layer::gradients_from_expected_output(std::vector<real> con
         return;
 
     out_gradients.resize(num_neurons);
-    for (integer i = 0; i < num_neurons; ++i)
+
+    real tmp_loss = out_loss;
+
+    #pragma omp parallel for if(num_neurons >= 128) reduction(+:tmp_loss)
+    for (natural i = 0; i < num_neurons; ++i)
     {
         real output_error = expected_output[i] - activations[i];
-        out_loss += output_error * output_error;
+        tmp_loss += output_error * output_error;
 
         out_gradients[i] = output_error * swish_derivative(activations[i]);
     }
+
+    out_loss = tmp_loss;
 }
 
 void prkl::ann_dense_layer::gradients_backpropagate(ann_gradients const& next_gradients, ann_layer_base *next_layer, ann_gradients &out_gradients) const
@@ -166,7 +232,8 @@ void prkl::ann_dense_layer::gradients_backpropagate(ann_gradients const& next_gr
 
     out_gradients.resize(num_neurons);
 
-    for (size_t i = 0; i < num_neurons; ++i)
+    #pragma omp parallel for if(num_neurons >= 128)
+    for (natural i = 0; i < num_neurons; ++i)
     {
         real sum = 0.0f;
 

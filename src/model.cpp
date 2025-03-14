@@ -4,38 +4,59 @@
 #include <iostream>
 #include <cinttypes>
 
+#define ann_model_magic 248912394734577843
+
 prkl::ann_model::ann_model(char const* path)
 {
-    // std::ifstream file(path, std::ios::binary);
-    // if(!file)
-    // {
-    //     std::cerr << "failed to open file for reading: " << path << std::endl;
-    //     return;
-    // }
+    std::ifstream file(path, std::ios::binary);
+    if(!file)
+    {
+        std::cerr << "failed to open file for reading: " << path << std::endl;
+        return;
+    }
 
-    // integer input_neurons = read_uint64_be(file); // input neurons
-    // integer trained_layers = read_uint64_be(file); // trained layer count (hidden+output)
+    integer magic = read_uint64_be(file);
 
-    // layers.resize(trained_layers + 1);
-    // layers[0].neurons.resize(input_neurons, ann_neuron(0));
+    if(magic != ann_model_magic)
+    {
+        std::cerr << "invalid model, magic mismatch" << std::endl;
+        return;
+    }
 
-    // for(integer i = 1; i < layers.size(); i++)
-    // {
-    //     ann_layer &layer = layers[i];
-    //     integer num_neurons = read_uint64_be(file);
-    //     layer.neurons.resize(num_neurons, ann_neuron(0));
+    integer version = read_uint64_be(file);
+    if(version > (integer)ann_model_version::latest)
+    {
+        std::cerr << "unsupported model version, please update this software to the latest version in order to load this model" << std::endl;
+        return;
+    }
 
-    //     for(ann_neuron &n : layer.neurons)
-    //     {
-    //         n.bias = read_float_be(file);
-    //         integer num_weights = read_uint64_be(file);
-    //         n.input_weights.resize(num_weights);
-    //         for(real &w : n.input_weights)
-    //         {
-    //             w = read_float_be(file);
-    //         }
-    //     }
-    // }
+    integer num_layers = read_uint64_be(file);
+    layers.resize(num_layers, nullptr);
+   
+    for(integer i = 0; i < num_layers; i++)
+    {
+        ann_layer_type layer_type = (ann_layer_type)read_uint64_be(file);
+        ann_layer_base *new_layer = nullptr;
+        switch(layer_type)
+        {
+            case ann_layer_type::dense:
+                layers[i] = new ann_dense_layer(file);
+            break;
+            case ann_layer_type::convolutional:
+                std::cerr << "convolutional layers not yet supported" << std::endl;
+                return;
+            break;
+            case ann_layer_type::pooling:
+                std::cerr << "pooling layers not yet supported" << std::endl;
+                return;
+            break;
+            default:
+                std::cerr << "unsupported layer type" << std::endl;
+                return;
+            break;
+        }
+
+    }
     
 }
 
@@ -49,38 +70,21 @@ prkl::ann_model::~ann_model()
 
 bool prkl::ann_model::write_file(char const* path)
 {
-    return false;
-    // if(layers.size() < 2)
-    // {
-    //     std::cerr << "failed to write model with less than 2 layers" << std::endl;
-    //     return false;
-    // }
+    std::ofstream file(path, std::ios::binary);
+    if(!file)
+    {
+        std::cerr << "failed to open file for writing: " << path << std::endl;
+        return false;
+    }
+    
+    write_uint64_be(file, ann_model_magic);
+    write_uint64_be(file, (uint64_t)ann_model_version::latest);
 
-    // std::ofstream file(path, std::ios::binary);
-    // if(!file)
-    // {
-    //     std::cerr << "failed to open file for writing: " << path << std::endl;
-    //     return false;
-    // }
+    write_uint64_be(file, layers.size());
+    for(ann_layer_base *layer : layers)
+        layer->write(file);
 
-    // write_uint64_be(file, layers[0].neurons.size()); // input neurons
-    // write_uint64_be(file, layers.size() - 1); // trained layer count (hidden+output)
-    // for(integer i = 1; i < layers.size(); i++)
-    // {
-    //     ann_layer &layer = layers[i];
-    //     write_uint64_be(file, layer.neurons.size());
-    //     for(ann_neuron &n : layer.neurons)
-    //     {
-    //         write_float_be(file, n.bias);
-    //         write_uint64_be(file, n.input_weights.size());
-    //         for(real w : n.input_weights)
-    //         {
-    //             write_float_be(file, w);
-    //         }
-    //     }
-    // }
-
-    // return true;
+    return true;
 }
 
 bool prkl::ann_model::forward_propagate()
@@ -238,6 +242,43 @@ bool prkl::ann_model::train(ann_set &training_set, integer epochs)
 
     return true;
 }
+
+prkl::real prkl::ann_model::evaluate(ann_set &evaluation_set)
+{
+    prkl::ann_layer_base *input_layer = input();
+    prkl::ann_layer_base *output_layer = output();
+    prkl::integer num_miss = 0;
+    prkl::integer num_pairs = evaluation_set.pairs.size();
+
+    for(prkl::integer e = 0; e <  num_pairs; e++)
+    {
+        prkl::ann_setpair &eval_pair = evaluation_set.pairs[e];
+
+        for(prkl::integer i = 0; i < input_layer->num_activations(); i++)
+        {
+            input_layer->set_activation(i, eval_pair.input[i]);
+        }
+
+        if(!forward_propagate())
+        {
+            std::cerr << "forward propagation failed: evaluation failed!" << std::endl;
+            return 0.0;
+        }
+
+        prkl::integer max_index_output = output_layer->max_activation_index();
+        prkl::integer max_index_expected = eval_pair.max_output_index();
+
+        if(max_index_output != max_index_expected)
+        {
+            num_miss++;
+        }
+    }
+
+    real success_rate = (1.0 - (prkl::real(num_miss) / prkl::real(num_pairs)));
+    std::cout << "Evaluated " << num_pairs << " pairs, with " << num_miss << " misses. Success rate: " << (100.0 * success_rate) << "%" << std::endl;
+    return success_rate;
+}
+
 
 prkl::ann_snapshot::ann_snapshot(ann_model &model)
 {

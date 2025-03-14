@@ -1,7 +1,6 @@
 
 #pragma once 
 
-#include "neuron.hpp"
 #include "layer.hpp"
 #include "set.hpp"
 
@@ -40,6 +39,7 @@ namespace prkl
         ann_layer_base *output();
 
         bool train(ann_set &training_set, integer epochs);
+        real evaluate(ann_set &evaluation_set);
 
         void apply_snapshot(ann_snapshot const& snapshot);
 

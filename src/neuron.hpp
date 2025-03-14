@@ -8,19 +8,19 @@
 namespace prkl 
 {
 
-    struct ann_layer;
+    // struct ann_layer;
 
-    struct ann_neuron 
-    {
-        ann_neuron(integer num_inputs);
+    // struct ann_neuron 
+    // {
+    //     ann_neuron(integer num_inputs);
         
-        void randomize();
+    //     void randomize();
 
-        real activate(ann_layer const &input_layer);
+    //     real activate(ann_layer const &input_layer);
 
-        real activation {0.0f};
-        real bias {0.0};
-        std::vector<real> input_weights;
-    };
+    //     real activation {0.0f};
+    //     real bias {0.0};
+    //     std::vector<real> input_weights;
+    // };
 
 }

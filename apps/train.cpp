@@ -88,6 +88,7 @@ int32_t main(int32_t argc, char **argv)
     if(do_evaluation)
     {
         evaluation_set = prkl::ann_set(evaluation_set_path.c_str());
+        std::cout << "Evaluation enabled" << std::endl;
     }
     
     prkl::integer num_epochs = parser.get<prkl::integer>("p");
@@ -112,14 +113,18 @@ int32_t main(int32_t argc, char **argv)
     std::cout << " ---------------------" << std::endl;
 
 
-    prkl::ann_model model(layer_sizes[0]);
-    std::cout << "input layer size: " << layer_sizes[0] << std::endl;
-    for(prkl::integer i = 1; i < layer_sizes.size(); i++)
+    prkl::ann_model model;
+
+    for(prkl::integer i = 0; i < layer_sizes.size(); i++)
     {
-        model.add_layer(layer_sizes[i]);
+        model.add_dense_layer(layer_sizes[i]);
         if(i == layer_sizes.size() - 1)
         {
             std::cout << "output layer size: " << layer_sizes[i] << std::endl;
+        }
+        else if (i == 0)
+        {
+            std::cout << "input layer size: " << layer_sizes[i] << std::endl;
         }
         else 
         {
@@ -137,17 +142,18 @@ int32_t main(int32_t argc, char **argv)
     if(do_evaluation)
     {
         std::cout << " --- Evaluating model --- " << std::endl;
-        prkl::ann_layer &input_layer = model.input();
-        prkl::ann_layer &output_layer = model.output();
+        prkl::ann_layer_base *input_layer = model.input();
+        prkl::ann_layer_base *output_layer = model.output();
         prkl::integer num_miss = 0;
         prkl::integer num_pairs = evaluation_set.pairs.size();
 
         for(prkl::integer e = 0; e <  num_pairs; e++)
         {
             prkl::ann_setpair &eval_pair = evaluation_set.pairs[e];
-            for(prkl::integer i = 0; i < input_layer.neurons.size(); i++)
+
+            for(prkl::integer i = 0; i < input_layer->num_activations(); i++)
             {
-                input_layer.neurons[i].activation = eval_pair.input[i];
+                input_layer->set_activation(i, eval_pair.input[i]);
             }
 
             if(!model.forward_propagate())
@@ -156,7 +162,7 @@ int32_t main(int32_t argc, char **argv)
                 return 1;
             }
 
-            prkl::integer max_index_output = output_layer.max_activation_index();
+            prkl::integer max_index_output = output_layer->max_activation_index();
             prkl::integer max_index_expected = eval_pair.max_output_index();
 
             if(max_index_output != max_index_expected)

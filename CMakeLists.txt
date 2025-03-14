@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.2)
+cmake_minimum_required(VERSION 3.2...4.0)
 project(prkl-ann)
 
 add_library(prkl-ann STATIC "src/common.hpp" "src/common.cpp" "src/neuron.hpp" "src/neuron.cpp" "src/layer.hpp" "src/layer.cpp" "src/model.hpp" "src/model.cpp" "src/set.cpp" "src/set.hpp")

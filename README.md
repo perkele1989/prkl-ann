@@ -10,7 +10,7 @@
 ✔ **Features Adaptive Learning Rate (ALR)**, dynamically adjusting learning rates to improve convergence stability.  
 ✔ **Uses the Swish activation function** (and its derivative) for neuron activations.  
 ✔ **Highly configurable training process**, with stable defaults that converge quickly on the MNIST dataset.  
-✔ **Pre-trained MNIST models included**, achieving **98.11% accuracy** at a **loss factor of 0.0432963**.
+✔ **Pre-trained MNIST models included**, achieving **98.11% accuracy** at a **loss factor of 0.0432963**.  
 ✔ **Custom binary formats** for datasets (`.prklset`) and trained models (`.prklmodel`).  
 ✔ **CLI tools for training and evaluation**, supporting arbitrary datasets and supervised learning setups.  
 

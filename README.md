@@ -9,6 +9,7 @@
 ✔ **Stochastic Gradient Descent (SGD)** for backpropagation-based learning.  
 ✔ **Activation Functions**: Linear, ReLU, Leaky ReLU, Swish, Tanh, Sigmoid.  
 ✔ **Evaluation Types**: Regression, Multiclass (with Softmax), Binary, Multilabel.  
+✔ **Regression Loss Functions**: Mean Squared Error, Mean Absolute Error.  
 ✔ **Adaptive Learning Rate (ALR)**, dynamically adjusting learning rates to improve convergence stability.  
 ✔ **Automatic Divergence Detection**, detects loss-based divergence and early exits to speed up training.  
 ✔ **Automatic Overfitting Prevention**, detects evaluated success divergence, and early exits to prevent overfitting.  

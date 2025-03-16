@@ -47,6 +47,42 @@ make
 ```
 
 ## Example Usage  
+
+First create a model configuration (`.json` file) like so:
+
+```json
+{
+    "evaluation_type": "multiclass_classification",
+    "layers": [
+        {
+            "type": "dense",
+            "num_neurons": 784,
+            "num_inputs": 0
+        },
+        {
+            "type": "dense",
+            "num_neurons": 64,
+            "num_inputs": 784,
+            "activation_func": "leaky_relu"
+        },
+        {
+            "type": "dense",
+            "num_neurons": 32,
+            "num_inputs": 64,
+            "activation_func": "leaky_relu"
+        },
+        {
+            "type": "dense",
+            "num_neurons": 10,
+            "num_inputs": 32,
+            "activation_func": "linear"
+        }
+    ]
+}
+```
+
+Then train it:
+
 ```sh
 # Train a model with a dataset, and a model configuration passed as json
 prkl-train -t dataset.prklset -o model.prklmodel -p 50 -c model.json

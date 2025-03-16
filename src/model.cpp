@@ -6,7 +6,79 @@
 
 #define ann_model_magic 248912394734577843
 
+prkl::ann_model::ann_model(nlohmann::json &cfg)
+    : prkl::ann_model::ann_model()
+{
+    if(cfg.contains("evaluation_type"))
+    {
+        std::string evaluation_type_str = cfg.at("evaluation_type").template get<std::string>();
+        if(evaluation_type_str == "regression")
+        { 
+            evaluation_type = ann_evaluation_type::regression;
+            std::cout << "model config: evaluation type: regression" << std::endl;
+        }
+        else if (evaluation_type_str == "multiclass_classification")
+        {
+            evaluation_type = ann_evaluation_type::multiclass_classification;
+            std::cout << "model config: evaluation type: multiclass_classification" << std::endl;
+        }
+        else if (evaluation_type_str == "binary_classification")
+        {
+            evaluation_type = ann_evaluation_type::binary_classification;
+            std::cout << "model config: evaluation type: binary_classification" << std::endl;
+        }
+        else if (evaluation_type_str == "multilabel_classification")
+        {
+            evaluation_type = ann_evaluation_type::multilabel_classification;
+            std::cout << "model config: evaluation type: multilabel_classification" << std::endl;
+        }
+        else 
+        {
+            std::cerr << "unrecognized evaluation type: " << evaluation_type_str << std::endl;
+        }
+    }
+
+    if(!cfg.contains("layers"))
+    {
+        std::cerr << "no layers in configuration" << std::endl;
+    }
+
+    for(nlohmann::json &layer : cfg.at("layers"))
+    {
+        if(!layer.contains("type"))
+        {
+            std::cerr << "invalid layer in configuration: type must be specified" << std::endl;
+            continue;
+        }
+
+        std::string type = layer.at("type").template get<std::string>();
+        if(type == "dense")
+        {
+            std::cout << "model config: dense layer --- " << std::endl;
+            prkl::ann_dense_layer *new_layer = new prkl::ann_dense_layer(layer);
+            new_layer->randomize_weights();
+            layers.push_back(new_layer);
+        }
+        else if(type == "convolutional")
+        {
+            std::cerr << "invalid layer in configuration: type not yet supported:" << type << std::endl;
+            continue;
+        }
+        else if(type == "pooling")
+        {
+            std::cerr << "invalid layer in configuration: type not yet supported:" << type << std::endl;
+            continue;
+        }
+        else 
+        {
+            std::cerr << "invalid layer in configuration: type not recognized:" << type << std::endl;
+            continue;
+        }
+    }
+}
+
 prkl::ann_model::ann_model(char const* path)
+: prkl::ann_model::ann_model()
 {
     std::ifstream file(path, std::ios::binary);
     if(!file)
@@ -30,6 +102,9 @@ prkl::ann_model::ann_model(char const* path)
         return;
     }
 
+    regression_loss_function = (ann_loss_function)read_uint64_be(file);
+    evaluation_type = (ann_evaluation_type)read_uint64_be(file);
+
     integer num_layers = read_uint64_be(file);
     layers.resize(num_layers, nullptr);
    
@@ -40,7 +115,7 @@ prkl::ann_model::ann_model(char const* path)
         switch(layer_type)
         {
             case ann_layer_type::dense:
-                layers[i] = new ann_dense_layer(file);
+                layers[i] = new ann_dense_layer(file, (ann_model_version)version);
             break;
             case ann_layer_type::convolutional:
                 std::cerr << "convolutional layers not yet supported" << std::endl;
@@ -80,6 +155,9 @@ bool prkl::ann_model::write_file(char const* path)
     write_uint64_be(file, ann_model_magic);
     write_uint64_be(file, (uint64_t)ann_model_version::latest);
 
+    write_uint64_be(file, (uint64_t)regression_loss_function);
+    write_uint64_be(file, (uint64_t)evaluation_type);
+
     write_uint64_be(file, layers.size());
     for(ann_layer_base *layer : layers)
         layer->write(file);
@@ -100,12 +178,17 @@ bool prkl::ann_model::forward_propagate()
         ann_layer_base *layer = layers[layer_index];
         ann_layer_base *prev_layer = layers[layer_index - 1];
         layer->forward(prev_layer);
+
+        if(evaluation_type == ann_evaluation_type::multiclass_classification && layer_index == layers.size() - 1)
+        {
+            layer->apply_softmax();
+        }
     }
 
     return true;
 }
 
-void prkl::ann_model::add_dense_layer(integer num_neurons)
+prkl::ann_dense_layer *prkl::ann_model::add_dense_layer(integer num_neurons)
 {
     integer prev_activations = 0;
     if(!layers.empty())
@@ -116,6 +199,7 @@ void prkl::ann_model::add_dense_layer(integer num_neurons)
     ann_dense_layer *new_layer = new ann_dense_layer(num_neurons, prev_activations);
     new_layer->randomize_weights();
     layers.push_back(new_layer);
+    return new_layer;
 }
 
 prkl::ann_layer_base *prkl::ann_model::hidden(integer index)
@@ -140,6 +224,8 @@ prkl::ann_layer_base *prkl::ann_model::output()
 prkl::ann_model prkl::ann_model::clone()
 {
     ann_model returner;
+    returner.evaluation_type = evaluation_type;
+    returner.regression_loss_function = regression_loss_function;
     returner.layers.reserve(layers.size());
 
     for(ann_layer_base *l : layers)
@@ -150,14 +236,16 @@ prkl::ann_model prkl::ann_model::clone()
     return returner;
 }
 
-bool prkl::ann_model::train(ann_set &training_set, integer epochs)
+bool prkl::ann_model::train(ann_set &training_set, integer epochs, ann_set *underfit_set)
 {
     ann_layer_base *input_layer = input();
     ann_layer_base *output_layer = output();
 
-    real learning_rate = settings.base_rate;
+    real learning_rate = settings().base_rate;
+    real best_success_rate = 0.0;
+    integer shittier_epochs = 0;
 
-    real min_loss = 1.0f;
+    real min_loss = std::numeric_limits<float>::infinity();
     ann_snapshot best_model = ann_snapshot(*this);
 
     if(training_set.num_inputs != input_layer->num_activations())
@@ -192,7 +280,7 @@ bool prkl::ann_model::train(ann_set &training_set, integer epochs)
 
             // calculate gradients from expected output
             std::vector<ann_gradients> layer_gradients(layers.size()-1);
-            output_layer->gradients_from_expected_output(training_pair.output, layer_gradients.back(), total_loss);
+            output_layer->gradients_from_expected_output(evaluation_type, regression_loss_function, training_pair.output, layer_gradients.back(), total_loss);
 
             for (integer layer_index = (integer)layers.size() - 2; layer_index > 0; --layer_index)
             {
@@ -215,29 +303,62 @@ bool prkl::ann_model::train(ann_set &training_set, integer epochs)
 
         real avg_loss = total_loss / training_set.pairs.size();
 
-        if(avg_loss < min_loss)
+        if(underfit_set)
         {
-            min_loss = avg_loss;
-            best_model.update(*this);
-            std::cout << "Epoch " << epoch << " Rate: " << learning_rate <<  " Loss: " << avg_loss << "(Snapshot)" << std::endl;
+            real success_rate = evaluate(*underfit_set);
+
+            if(success_rate > best_success_rate)
+            {
+                best_success_rate = success_rate;
+                min_loss = avg_loss; // not really the min loss, but the loss of the best success rate!
+                best_model.update(*this);
+                shittier_epochs = 0;
+
+                std::cout << "Epoch " << epoch << " Learning Rate: " << learning_rate <<  ", Success Rate: " << (success_rate * 100.0) << "% (Best yet)"  << std::endl;
+            }
+            else
+            {
+                
+                std::cout << "Epoch " << epoch << " Learning Rate: " << learning_rate <<  ", Success Rate: " << (success_rate * 100.0) << "%"  << std::endl;
+                shittier_epochs++;
+                if(shittier_epochs >= 4)
+                {
+                    std::cout << "Success rate is diverging, exiting early.." << std::endl;
+                    break;
+                }
+            }
         }
         else 
         {
-            std::cout << "Epoch " << epoch << " Rate: " << learning_rate <<  " Loss: " << avg_loss << std::endl;
+            if(avg_loss < min_loss)
+            {
+                min_loss = avg_loss;
+                best_model.update(*this);
+                std::cout << "Epoch " << epoch << " Learning Rate: " << learning_rate <<  " Loss: " << avg_loss << " (Best yet)" << std::endl;
+            }
+            else 
+            {
+                std::cout << "Epoch " << epoch << " Learning Rate: " << learning_rate <<  " Loss: " << avg_loss << std::endl;
+            }
+                    
+            if(prkl::settings().early_exit && (avg_loss > min_loss * (1.0f + prkl::settings().early_exit_treshold)))
+            {
+                std::cout << "Loss rate is diverging, exiting early.." << std::endl;
+                break;
+            }
         }
         
-
-        
-        if(avg_loss > min_loss * 1.2f)
-        {
-            std::cout << "Diverging, exiting early.." << std::endl;
-            break;
-        }
-
         learning_rate = adaptive_learning_rate(avg_loss);
     }
 
-    std::cout << "Trained model to loss rate of " << min_loss << std::endl;
+    if(underfit_set)
+    {
+        std::cout << "Trained model to success rate of " << (best_success_rate*100.0) << "% at loss of " << min_loss << std::endl;
+    }
+    else 
+    {
+        std::cout << "Trained model to loss rate of " << min_loss << std::endl;
+    }
     apply_snapshot(best_model);
 
     return true;

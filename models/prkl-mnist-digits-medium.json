@@ -1,0 +1,34 @@
+{
+    "evaluation_type": "multiclass_classification",
+    "layers": [
+        {
+            "type": "dense",
+            "num_neurons": 784,
+            "num_inputs": 0
+        },
+        {
+            "type": "dense",
+            "num_neurons": 128,
+            "num_inputs": 784,
+            "activation_func": "leaky_relu"
+        },
+        {
+            "type": "dense",
+            "num_neurons": 64,
+            "num_inputs": 128,
+            "activation_func": "leaky_relu"
+        },
+        {
+            "type": "dense",
+            "num_neurons": 64,
+            "num_inputs": 64,
+            "activation_func": "leaky_relu"
+        },
+        {
+            "type": "dense",
+            "num_neurons": 10,
+            "num_inputs": 64,
+            "activation_func": "linear"
+        }
+    ]
+}

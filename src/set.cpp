@@ -26,6 +26,8 @@ prkl::ann_set::ann_set(char const* path)
     uint64_t num_pairs = read_uint64_be(file);
     pairs.resize(num_pairs);
 
+    std::cout << "Loading set with " << num_inputs << " inputs, " << num_outputs << " outputs, and " << num_pairs << " pairs" << std::endl;
+
     for(uint64_t i = 0; i < num_pairs; i++)
     {
         ann_setpair &new_pair = pairs[i];

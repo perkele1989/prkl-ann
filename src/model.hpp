@@ -23,12 +23,13 @@ namespace prkl
     struct ann_model 
     {
         ann_model(char const* path);
+        ann_model(nlohmann::json &cfg);
         ann_model()=default;
         ~ann_model();
 
         ann_model clone();
 
-        void add_dense_layer(integer num_neurons);
+        ann_dense_layer* add_dense_layer(integer num_neurons);
 
         bool write_file(char const* path);
 
@@ -38,10 +39,13 @@ namespace prkl
         ann_layer_base *input();
         ann_layer_base *output();
 
-        bool train(ann_set &training_set, integer epochs);
+        bool train(ann_set &training_set, integer epochs, ann_set *underfit_set = nullptr);
         real evaluate(ann_set &evaluation_set);
 
         void apply_snapshot(ann_snapshot const& snapshot);
+
+        ann_evaluation_type evaluation_type{ann_evaluation_type::regression};
+        ann_loss_function regression_loss_function{ann_loss_function::mean_squared_error};
 
         std::vector<ann_layer_base*> layers;
     };

@@ -74,7 +74,18 @@
         "xloctime": "cpp",
         "xtree": "cpp",
         "numbers": "cpp",
-        "xstddef": "cpp"
+        "xstddef": "cpp",
+        "any": "cpp",
+        "chrono": "cpp",
+        "codecvt": "cpp",
+        "filesystem": "cpp",
+        "forward_list": "cpp",
+        "iomanip": "cpp",
+        "numeric": "cpp",
+        "ranges": "cpp",
+        "span": "cpp",
+        "valarray": "cpp",
+        "csignal": "cpp"
     },
     "cmake.debugConfig": {
         "args": [
@@ -83,9 +94,13 @@
             "-e",
             "C:/dev/prkl-ann/data/mnnist-digits-evaluation.prklset",
             "-p",
-            "1",
+            "50",
             "-c",
-            "784,64,32,10"
+            "C:/dev/prkl-ann/models/prkl-mnist-digits-small.json",
+            "-l",
+            "0.1",
+            "-b",
+            "0.01"
         ]
     }
 }

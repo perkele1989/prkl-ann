@@ -9,55 +9,33 @@
 
 int32_t main(int32_t argc, char **argv)
 {
-    cli::Parser parser(argc, argv);
-    parser.set_required<std::string>("m", "model", "Path to MNIST digits model, needs to have 784 inputs and 10 outputs (.prklmodel file)");
-    parser.set_required<std::string>("i", "input", "Path to input image file, will be scaled to 28x28 for inference");
-    parser.run_and_exit_if_error();
+    prkl::ann_settings &settings = prkl::settings();
+    settings.loss_edge = 0.1;
+    settings.base_rate = 0.01;
 
+    std::cout << " --- Building model ---" << std::endl;
+    prkl::ann_model model;
+    model.evaluation_type = prkl::ann_evaluation_type::multiclass_classification;
 
-    std::string model_path = parser.get<std::string>("m");
-    std::string input_path = parser.get<std::string>("i");
-    
-    std::cout << " --- Loading model ---" << std::endl;
-    prkl::ann_model model(model_path.c_str());
-    prkl::ann_layer_base *input_layer = model.input();
-    prkl::ann_layer_base *output_layer = model.output();
-    if(input_layer->num_activations() != 784)
-    {
-        std::cerr << "Model input size is not 784, incompatible with MNIST digits set" << std::endl;
-        return 1;
-    }
+    prkl::ann_layer_base *input_layer = model.add_dense_layer(784);
 
-    if(output_layer->num_activations() != 10)
-    {
-        std::cerr << "Model output size is not 10, incompatible with MNIST digits set" << std::endl;
-        return 1;
-    }
+    prkl::ann_layer_base *hidden1 = model.add_dense_layer(64);
+    hidden1->activation_func = prkl::ann_activation::leaky_relu;
 
-    std::cout << " --- Loading image ---" << std::endl;
-    int x, y, cmp;
-    float *data = stbi_loadf(input_path.c_str(), &x, &y, &cmp, 1);
-    if(!data)
-    {
-        std::cerr << "failed to load input image: " << input_path << std::endl;
-        return 1;
-    }
+    prkl::ann_layer_base *hidden2 = model.add_dense_layer(32);
+    hidden2->activation_func = prkl::ann_activation::leaky_relu;
 
-    float *scaled_data = stbir_resize_float_linear(data, x, y, 0, NULL, 28, 28, 0, (stbir_pixel_layout)1);
-    if(!scaled_data)
-    {
-        std::cerr << "failed to resize input image" << std::endl;
-        return 1;
-    }
-    free(data);
+    prkl::ann_layer_base *output_layer = model.add_dense_layer(10);
+    output_layer->activation_func = prkl::ann_activation::linear;
 
-    for(prkl::integer i = 0; i < 784; i++)
-    {
-        input_layer->set_activation(i, scaled_data[i]);
-    }
+    std::cout << " --- Loading training set ---" << std::endl;
+    prkl::ann_set training_set("C:/dev/prkl-ann/data/mnnist-digits-training.prklset");
 
-    free(scaled_data);
+    std::cout << " --- Loading evaluation set ---" << std::endl;
+    prkl::ann_set evaluation_set("C:/dev/prkl-ann/data/mnnist-digits-evaluation.prklset");
 
+    std::cout << " --- Training model ---" << std::endl;
+    model.train(training_set, 20);
 
     std::cout << " --- Running inference ---" << std::endl;
     if(!model.forward_propagate())
@@ -66,11 +44,7 @@ int32_t main(int32_t argc, char **argv)
         return 1;
     }
 
-    prkl::integer max_index = output_layer->max_activation_index();
-
-    prkl::real certainty = std::clamp(output_layer->get_activation(max_index) * 100.0f, 0.0f, 100.0f);
-    std::cout << "The image is identified as the digit " << max_index << " with a certainty of " << certainty << "%" << std::endl; 
-
+    model.evaluate(evaluation_set);
 
     return 0;
 }

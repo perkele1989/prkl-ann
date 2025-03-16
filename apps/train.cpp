@@ -8,77 +8,38 @@ int32_t main(int32_t argc, char **argv)
     cli::Parser parser(argc, argv);
     parser.set_required<std::string>("t", "training-set", "Path to training set (.prklset file)");
     parser.set_optional<std::string>("e", "evaluation-set", "", "Path to evaluation set (.prklset file)");
-    parser.set_optional<prkl::real>("a", "alr-ease-alpha", prkl::settings.ease_alpha, "Adaptive Learning Rate: Ease alpha");
-    parser.set_optional<bool>("s", "alr-ease", prkl::settings.ease, "Adaptive Learning Rate: Ease");
-    parser.set_optional<prkl::real>("b", "alr-base-rate", prkl::settings.base_rate, "Adaptive Learning Rate: Base rate");
-    parser.set_optional<prkl::real>("m", "alr-min-rate", prkl::settings.min_rate, "Adaptive Learning Rate: Minimum rate");
-    parser.set_optional<prkl::real>("l", "alr-loss-edge", prkl::settings.loss_edge, "Adaptive Learning Rate: Loss edge");
-    parser.set_optional<prkl::real>("g", "grad-limit", prkl::settings.grad_limit, "Maximum gradient amplitude");
+    parser.set_optional<prkl::real>("a", "alr-ease-alpha", prkl::settings().ease_alpha, "Adaptive Learning Rate: Ease alpha");
+    parser.set_optional<bool>("s", "alr-ease", prkl::settings().ease, "Adaptive Learning Rate: Ease");
+    parser.set_optional<bool>("z", "alr", prkl::settings().alr, "Adaptive Learning Rate Enabled");
+    parser.set_optional<prkl::real>("b", "learning-rate", prkl::settings().base_rate, "Learning rate (for ALR, this specifies base rate)");
+    parser.set_optional<prkl::real>("m", "alr-min-rate", prkl::settings().min_rate, "Adaptive Learning Rate: Minimum rate");
+    parser.set_optional<prkl::real>("l", "alr-loss-edge", prkl::settings().loss_edge, "Adaptive Learning Rate: Loss edge");
+    parser.set_optional<prkl::real>("g", "grad-limit", prkl::settings().grad_limit, "Maximum gradient amplitude");
     parser.set_optional<std::string>("o", "output", "", "Path to output file (.prklmodel file)");
     parser.set_optional<prkl::integer>("p", "epochs", 10, "Number of epochs");
-    parser.set_required<std::string>("c", "config", "Layer configuration, e.g. 768,64,32,10");
+    parser.set_required<std::string>("c", "config", "Path to model config (.json file)");
     parser.run_and_exit_if_error();
 
-    std::string config = parser.get<std::string>("c");
-    std::vector<prkl::integer> layer_sizes;
-    std::string nbuff;
-    for(char s : config)
+    std::string config_path = parser.get<std::string>("c");
+    std::ifstream config_file(config_path);
+    if(!config_file)
     {
-        if(std::isdigit(s))
-        {
-            nbuff.push_back(s);
-        }
-        else 
-        {
-            if(!nbuff.empty())
-            {
-                prkl::integer new_size = 0;
-                try
-                {
-                    new_size = std::stoll(nbuff);
-                }
-                catch(...)
-                {
-                    std::cerr << "invalid config parameter" << std::endl;
-                    return 1;
-                }
-                layer_sizes.push_back(new_size);
-                nbuff.clear();
-            }
-        }
-    }
-    if(!nbuff.empty())
-    {
-        prkl::integer new_size = 0;
-        try
-        {
-            new_size = std::stoll(nbuff);
-        }
-        catch(...)
-        {
-            std::cerr << "invalid config parameter" << std::endl;
-            return 1;
-        }
-        layer_sizes.push_back(new_size);
-        nbuff.clear();
-    }
-
-    if(layer_sizes.size() < 2)
-    {
-        std::cerr << "At least 2 layer sizes are required" << std::endl;
+        std::cerr << "Failed to read model configuration: " << config_path << std::endl;
         return 1;
     }
+    nlohmann::json config = nlohmann::json::parse(config_file);
 
     std::string training_set_path = parser.get<std::string>("t");
     std::string evaluation_set_path = parser.get<std::string>("e");
     bool do_evaluation = !evaluation_set_path.empty();
     
-    prkl::settings.ease_alpha = parser.get<prkl::real>("a");
-    prkl::settings.ease = parser.get<bool>("s");
-    prkl::settings.base_rate = parser.get<prkl::real>("b");
-    prkl::settings.min_rate = parser.get<prkl::real>("m");
-    prkl::settings.loss_edge = parser.get<prkl::real>("l");
-    prkl::settings.grad_limit = parser.get<prkl::real>("g");
+    prkl::settings().ease_alpha = parser.get<prkl::real>("a");
+    prkl::settings().ease = parser.get<bool>("s");
+    prkl::settings().alr = parser.get<bool>("z");
+    prkl::settings().base_rate = parser.get<prkl::real>("b");
+    prkl::settings().min_rate = parser.get<prkl::real>("m");
+    prkl::settings().loss_edge = parser.get<prkl::real>("l");
+    prkl::settings().grad_limit = parser.get<prkl::real>("g");
 
     std::string output_path = parser.get<std::string>("o");
     bool do_output = !output_path.empty();
@@ -99,41 +60,26 @@ int32_t main(int32_t argc, char **argv)
     }
 
     std::cout << " --- Configuration ---" << std::endl;
+    std::cout << "Layer configuration: " << config_path << std::endl;
     std::cout << "Training set: " << training_set_path << std::endl;
     std::cout << "Evaluation set: " << evaluation_set_path << std::endl;
     std::cout << "Output model: " << output_path << std::endl;
-    std::cout << "Layer configuration: " << config << std::endl;
     std::cout << "Num. epochs: " << num_epochs << std::endl;
-    std::cout << "Gradient limit: " << prkl::settings.grad_limit << std::endl;
-    std::cout << "ALR loss edge: " <<  prkl::settings.loss_edge << std::endl;
-    std::cout << "ALR base rate: " <<  prkl::settings.base_rate << std::endl;
-    std::cout << "ALR minimum rate: " <<  prkl::settings.min_rate << std::endl;
-    std::cout << "ALR ease: " <<  prkl::settings.ease << std::endl;
-    std::cout << "ALR ease alpha: " <<  prkl::settings.ease_alpha << std::endl;
+    std::cout << "Gradient limit: " << prkl::settings().grad_limit << std::endl;
+    std::cout << "ALR enabled:" << prkl::settings().alr << std::endl;
+    std::cout << "ALR loss edge: " <<  prkl::settings().loss_edge << std::endl;
+    std::cout << "ALR base rate: " <<  prkl::settings().base_rate << std::endl;
+    std::cout << "ALR minimum rate: " <<  prkl::settings().min_rate << std::endl;
+    std::cout << "ALR ease: " <<  prkl::settings().ease << std::endl;
+    std::cout << "ALR ease alpha: " <<  prkl::settings().ease_alpha << std::endl;
     std::cout << " ---------------------" << std::endl;
 
 
-    prkl::ann_model model;
+    prkl::ann_model model(config);
 
-    for(prkl::integer i = 0; i < layer_sizes.size(); i++)
-    {
-        model.add_dense_layer(layer_sizes[i]);
-        if(i == layer_sizes.size() - 1)
-        {
-            std::cout << "output layer size: " << layer_sizes[i] << std::endl;
-        }
-        else if (i == 0)
-        {
-            std::cout << "input layer size: " << layer_sizes[i] << std::endl;
-        }
-        else 
-        {
-            std::cout << "hidden layer size " << i << ": " << layer_sizes[i] << std::endl;
-        }
-    }
 
     std::cout << " --- Training model --- " << std::endl;
-    if(!model.train(training_set, num_epochs))
+    if(!model.train(training_set, num_epochs, do_evaluation ? &evaluation_set : nullptr))
     {
         std::cerr << "training failed" << std::endl;
         return 1;

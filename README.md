@@ -5,28 +5,31 @@
 
 ## What it is  
 ✔ **An educational framework** with an intuitive C++ API designed for learning and experimentation.  
-✔ **Supports Multi-Layer Perceptrons (MLPs)** with dense, fully connected layers.  
-✔ **Implements Stochastic Gradient Descent (SGD)** for backpropagation-based learning.  
-✔ **Features Adaptive Learning Rate (ALR)**, dynamically adjusting learning rates to improve convergence stability.  
-✔ **Uses the Swish activation function** (and its derivative) for neuron activations.  
-✔ **Highly configurable training process**, with stable defaults that converge quickly on the MNIST dataset.  
-✔ **Pre-trained MNIST models included**, achieving **98.11% accuracy** at a **loss factor of 0.0432963**.  
+✔ **Multi-Layer Perceptrons (MLPs)** with dense, fully connected layers. *(Convolutional/Pooling layers are in progress!)*  
+✔ **Stochastic Gradient Descent (SGD)** for backpropagation-based learning.  
+✔ **Activation Functions**: Linear, ReLU, Leaky ReLU, Swish, Tanh, Sigmoid.  
+✔ **Evaluation Types**: Regression, Multiclass (with Softmax), Binary, Multilabel.  
+✔ **Adaptive Learning Rate (ALR)**, dynamically adjusting learning rates to improve convergence stability.  
+✔ **Automatic Divergence Detection**, detects loss-based divergence and early exits to speed up training.  
+✔ **Automatic Overfitting Prevention**, detects evaluated success divergence, and early exits to prevent overfitting.  
+✔ **Highly configurable training process** with stable defaults that converge quickly on the MNIST dataset.  
+✔ **Pre-trained MNIST models included**, achieving a **98.55% success rate** against the evaluation set.  
+✔ **Custom .json model configs** to make building and training models more convenient.  
 ✔ **Custom binary formats** for datasets (`.prklset`) and trained models (`.prklmodel`).  
 ✔ **CLI tools for training and evaluation**, supporting arbitrary datasets and supervised learning setups.  
 
-## What it is not (yet)  
-❌ Optimized for performance (memory management is lazy, and cache efficiency is not a priority).  
-❌ A framework for Convolutional Neural Networks (CNNs).  
-❌ A framework for Large Language Models (LLMs) or Transformers.  
+## TODO
+❌ Convolutional Layer Support (check out `convolutional-layers` branch)  
+❌ Transformers/LLM's (longterm plans)
 
 ## Pretrained models
-The repository contains 3 models of different sizes, that are pretrained on the MNIST digits dataset. These models are simple MLP's with dense layers, and do not use convolution layers and such.
+The repository contains 3 models of different sizes, that are pretrained on the MNIST digits dataset. These models are simple MLP's with dense layers, and do not use convolution layers. As such, they do not generalize well, and these models are mostly here as a performance metric for the framework.
 
-| Model | Size | Layers | Accuracy | Loss |
-| ---| --- | --- | --- | --- |
-|`prkl-mnist-digits-small`|210 KB|784, 64, 32, 10|96.24%|  0.0850094 |
-|`prkl-mnist-digits-medium`|448 KB|784, 128, 64, 64, 10|97.36%|  0.0471145 |
-|`prkl-mnist-digits-big`|1362 KB|784, 392, 98, 10|98.11%| 0.0432963 |
+| Model | Size | Layers | Accuracy |
+| ---| --- | --- | --- |
+|`prkl-mnist-digits-small`|210 KB|784, 64, 32, 10|97.84%|
+|`prkl-mnist-digits-medium`|448 KB|784, 128, 64, 64, 10|98.27%|
+|`prkl-mnist-digits-big`|1362 KB|784, 392, 98, 10|98.55%|
 
 ## Installation  
 
@@ -45,10 +48,13 @@ make
 
 ## Example Usage  
 ```sh
-# Train a model with a dataset
-prkl-train -t dataset.prklset -o model.prklmodel -p 50 -c 784,128,64,64,10
+# Train a model with a dataset, and a model configuration passed as json
+prkl-train -t dataset.prklset -o model.prklmodel -p 50 -c model.json
 
-# Evaluate the trained model (preferrably with a different set than what you trained it on)
+# Train a model like above, but with an evaluation set, this does automatic overfitting prevention!
+prkl-train -t dataset.prklset -e evaluation.prklset -o model.prklmodel -p 50 -c model.json
+
+# Evaluate a pre-trained model
 prkl-evaluate -e evaluation.prklset -m model.prklmodel
 ```
 
@@ -84,10 +90,4 @@ with open("mnnist-digits-training.prklset", "wb") as f:
         l[L[i]] = 1.0
         f.write(struct.pack("!10f", *l))
 ```
-
-## Roadmap  
-- [ ] Implement dropout layers for regularization.  
-- [ ] Add support for the Adam optimizer.  
-- [ ] Introduce Convolutional Neural Networks (CNNs).  
-- [ ] Explore recurrent networks for sequence-based tasks.  
 
